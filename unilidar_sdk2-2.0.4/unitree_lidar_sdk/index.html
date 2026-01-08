@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bosch GLM 50-27 CG Connector</title>
+    <style>
+        :root { --bosch-blue: #005691; --bosch-red: #E20015; --bosch-green: #00884A; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f4f4; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        
+        .device-card {
+            background: white; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 100%; max-width: 400px; overflow: hidden; position: relative;
+        }
+
+        .header { background: var(--bosch-blue); color: white; padding: 20px; text-align: center; }
+        .header h2 { margin: 0; font-size: 1.2rem; font-weight: 600; }
+        .status-bar { background: #333; color: #fff; font-size: 0.8rem; padding: 5px; text-align: center; }
+
+        .display-area {
+            background: #222; color: #00ff00; font-family: 'Courier New', monospace;
+            padding: 30px; text-align: right; position: relative; min-height: 120px;
+            display: flex; flex-direction: column; justify-content: center;
+        }
+        .measurement-value { font-size: 3.5rem; line-height: 1; font-weight: bold; }
+        .unit { font-size: 1.2rem; color: #aaa; margin-top: 5px; }
+        .laser-icon { 
+            position: absolute; top: 10px; left: 10px; width: 15px; height: 15px; 
+            background: var(--bosch-red); border-radius: 50%; opacity: 0.2; transition: opacity 0.2s;
+        }
+        .laser-icon.active { opacity: 1; box-shadow: 0 0 10px var(--bosch-red); }
+
+        .controls { padding: 20px; display: grid; gap: 10px; }
+        button {
+            border: none; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s; width: 100%;
+        }
+        button:active { transform: scale(0.98); }
+        .btn-connect { background: var(--bosch-blue); color: white; }
+        .btn-save { background: var(--bosch-green); color: white; opacity: 0.5; pointer-events: none; }
+        .btn-save.ready { opacity: 1; pointer-events: all; }
+
+        /* Logs for debugging */
+        #log { font-size: 0.75rem; color: #666; padding: 20px; width: 100%; max-width: 400px; height: 100px; overflow-y: auto; border-top: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+
+    <div class="device-card">
+        <div class="header">
+            <h2>GLM 50-27 CG Connect</h2>
+        </div>
+        <div id="status" class="status-bar">Disconnected</div>
+        
+        <div class="display-area">
+            <div id="laserIndicator" class="laser-icon"></div>
+            <div id="value">0.000</div>
+            <div class="unit">m</div>
+        </div>
+
+        <div class="controls">
+            <button id="connectBtn" class="btn-connect">Connect to Device</button>
+            <button id="saveBtn" class="btn-save">Save to Google Sheet</button>
+        </div>
+    </div>
+
+    <div id="log">Logs will appear here...</div>
+
+    <script>
+        // --- CONFIGURATION ---
+        // REPLACE THIS with your Google Apps Script Web App URL from Part 1
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwiz-Z2gjOmFtDKWupTzC9OhCRWYVQK4LaT5UiACgiQtn61vfZk2ws1CKk4Tkwve1jssQ/exec"; 
+
+        // --- BOSCH GLM CONSTANTS (Reverse Engineered) ---
+        // These UUIDs are standard for many Bosch PLR/GLM devices
+        // Ideally, we filter by namePrefix 'Bosch'
+        const SERVICE_UUID_CUSTOM = '00005555-0000-1000-8000-00805f9b34fb'; 
+        const CHAR_RX_UUID = '00005555-0000-1000-8000-00805f9b34fb'; // Sometimes Write/Notify are same
+        
+        // Command to enable auto-sync/measurement flow
+        // 0xC0 = Command Start, 0x55 = Sync/Config
+        const CMD_ENABLE_MEASURE = new Uint8Array([0xC0, 0x55, 0x02, 0x01, 0x00, 0x1A]);
+
+        let bluetoothDevice;
+        let gattServer;
+        let characteristic;
+        let currentMeasurement = 0.0;
+
+        const connectBtn = document.getElementById('connectBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        const statusDiv = document.getElementById('status');
+        const valueDiv = document.getElementById('value');
+        const laserIcon = document.getElementById('laserIndicator');
+        const logDiv = document.getElementById('log');
+
+        function log(msg) {
+            logDiv.innerHTML += `<div>> ${msg}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(msg);
+        }
+
+        connectBtn.addEventListener('click', async () => {
+            try {
+                log('Requesting Bluetooth Device...');
+                bluetoothDevice = await navigator.bluetooth.requestDevice({
+                    filters: [{ namePrefix: 'Bosch' }],
+                    optionalServices: [SERVICE_UUID_CUSTOM, '00001800-0000-1000-8000-00805f9b34fb']
+                });
+
+                bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
+                
+                statusDiv.innerText = 'Connecting...';
+                gattServer = await bluetoothDevice.gatt.connect();
+                log('Connected to GATT Server');
+
+                // Try to get the custom service
+                const service = await gattServer.getPrimaryService(SERVICE_UUID_CUSTOM);
+                log('Service found');
+
+                // Get Characteristic
+                characteristic = await service.getCharacteristic(CHAR_RX_UUID);
+                log('Characteristic found');
+
+                // Start Notifications
+                await characteristic.startNotifications();
+                characteristic.addEventListener('characteristicvaluechanged', handleData);
+                log('Notifications started');
+
+                // Send "Enable" command to wake up data stream
+                await characteristic.writeValue(CMD_ENABLE_MEASURE);
+                log('Sent Enable Command');
+
+                statusDiv.innerText = 'Connected: ' + bluetoothDevice.name;
+                statusDiv.style.background = '#00884A';
+                connectBtn.innerText = 'Disconnect';
+                
+            } catch (error) {
+                log('Error: ' + error);
+                statusDiv.innerText = 'Connection Failed';
+            }
+        });
+
+        function onDisconnected() {
+            statusDiv.innerText = 'Disconnected';
+            statusDiv.style.background = '#333';
+            connectBtn.innerText = 'Connect to Device';
+            saveBtn.classList.remove('ready');
+            laserIcon.classList.remove('active');
+        }
+
+        function handleData(event) {
+            const value = event.target.value;
+            const dataView = new DataView(value.buffer);
+            
+            // Debug: Print raw hex bytes
+            let hex = [];
+            for(let i=0; i<value.byteLength; i++) hex.push(value.getUint8(i).toString(16).padStart(2,'0'));
+            // log('Raw: ' + hex.join(' '));
+
+            // Bosch Protocol Parsing (Heuristic)
+            // Valid packets often start with 0xC0
+            // Distance is typically a 32-bit float starting at a specific offset
+            // We search for a plausible float value in the packet
+            
+            // Check packet header
+            if (value.getUint8(0) === 0xC0) {
+                laserIcon.classList.add('active');
+                setTimeout(() => laserIcon.classList.remove('active'), 200);
+
+                // Different Bosch models have the float at different offsets.
+                // For GLM 50 C/100 C, it is often at index 6 or 7.
+                // We try to read a float at offset 6.
+                if (value.byteLength > 10) {
+                    try {
+                        // Read Float32 (Little Endian)
+                        let dist = dataView.getFloat32(6, true); 
+                        
+                        // Sanity check: Distance is usually between 0 and 100m
+                        if (dist > 0.0 && dist < 150.0) {
+                            currentMeasurement = dist * 1000; // Convert to mm if needed, or keep meters
+                            valueDiv.innerText = dist.toFixed(3);
+                            saveBtn.classList.add('ready');
+                        }
+                    } catch (e) {
+                        // ignore parsing errors
+                    }
+                }
+            }
+        }
+
+        saveBtn.addEventListener('click', () => {
+            if (!saveBtn.classList.contains('ready')) return;
+
+            const payload = {
+                measurement: document.getElementById('value').innerText,
+                unit: 'm'
+            };
+
+            saveBtn.innerText = 'Saving...';
+            
+            // Send to Google Apps Script
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors', // Important for GAS Web Apps
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload)
+            }).then(() => {
+                saveBtn.innerText = 'Saved!';
+                setTimeout(() => saveBtn.innerText = 'Save to Google Sheet', 2000);
+                log('Data sent to sheet');
+            }).catch(err => {
+                log('Save Error: ' + err);
+                saveBtn.innerText = 'Error Saving';
+            });
+        });
+
+    </script>
+</body>
+</html>
