@@ -35,3 +35,10 @@ target_link_libraries(example_ceiling_measurement
    libunitree_lidar_sdk.a
    pthread
 )
+
+add_executable(wall_scan examples/example_wall_scan.cpp)
+target_link_libraries(wall_scan libunitree_lidar_sdk.a pthread)
+
+# Wall Measurement Tool
+add_executable(wall_measure examples/example_wall_measure.cpp)
+target_link_libraries(wall_measure unitree_lidar_sdk)

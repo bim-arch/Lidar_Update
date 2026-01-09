@@ -155,6 +155,32 @@ example_ceiling_measurement/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/example_ceiling_measurement.dir/build.make CMakeFiles/example_ceiling_measurement.dir/build
 .PHONY : example_ceiling_measurement/fast
 
+#=============================================================================
+# Target rules for targets named wall_scan
+
+# Build rule for target.
+wall_scan: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 wall_scan
+.PHONY : wall_scan
+
+# fast build rule for target.
+wall_scan/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wall_scan.dir/build.make CMakeFiles/wall_scan.dir/build
+.PHONY : wall_scan/fast
+
+#=============================================================================
+# Target rules for targets named wall_measure
+
+# Build rule for target.
+wall_measure: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 wall_measure
+.PHONY : wall_measure
+
+# fast build rule for target.
+wall_measure/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wall_measure.dir/build.make CMakeFiles/wall_measure.dir/build
+.PHONY : wall_measure/fast
+
 examples/example_ceiling_measurement.o: examples/example_ceiling_measurement.cpp.o
 .PHONY : examples/example_ceiling_measurement.o
 
@@ -227,6 +253,54 @@ examples/example_lidar_udp.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/example_lidar_udp.dir/build.make CMakeFiles/example_lidar_udp.dir/examples/example_lidar_udp.cpp.s
 .PHONY : examples/example_lidar_udp.cpp.s
 
+examples/example_wall_measure.o: examples/example_wall_measure.cpp.o
+.PHONY : examples/example_wall_measure.o
+
+# target to build an object file
+examples/example_wall_measure.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wall_measure.dir/build.make CMakeFiles/wall_measure.dir/examples/example_wall_measure.cpp.o
+.PHONY : examples/example_wall_measure.cpp.o
+
+examples/example_wall_measure.i: examples/example_wall_measure.cpp.i
+.PHONY : examples/example_wall_measure.i
+
+# target to preprocess a source file
+examples/example_wall_measure.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wall_measure.dir/build.make CMakeFiles/wall_measure.dir/examples/example_wall_measure.cpp.i
+.PHONY : examples/example_wall_measure.cpp.i
+
+examples/example_wall_measure.s: examples/example_wall_measure.cpp.s
+.PHONY : examples/example_wall_measure.s
+
+# target to generate assembly for a file
+examples/example_wall_measure.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wall_measure.dir/build.make CMakeFiles/wall_measure.dir/examples/example_wall_measure.cpp.s
+.PHONY : examples/example_wall_measure.cpp.s
+
+examples/example_wall_scan.o: examples/example_wall_scan.cpp.o
+.PHONY : examples/example_wall_scan.o
+
+# target to build an object file
+examples/example_wall_scan.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wall_scan.dir/build.make CMakeFiles/wall_scan.dir/examples/example_wall_scan.cpp.o
+.PHONY : examples/example_wall_scan.cpp.o
+
+examples/example_wall_scan.i: examples/example_wall_scan.cpp.i
+.PHONY : examples/example_wall_scan.i
+
+# target to preprocess a source file
+examples/example_wall_scan.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wall_scan.dir/build.make CMakeFiles/wall_scan.dir/examples/example_wall_scan.cpp.i
+.PHONY : examples/example_wall_scan.cpp.i
+
+examples/example_wall_scan.s: examples/example_wall_scan.cpp.s
+.PHONY : examples/example_wall_scan.s
+
+# target to generate assembly for a file
+examples/example_wall_scan.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wall_scan.dir/build.make CMakeFiles/wall_scan.dir/examples/example_wall_scan.cpp.s
+.PHONY : examples/example_wall_scan.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -238,6 +312,8 @@ help:
 	@echo "... example_ceiling_measurement"
 	@echo "... example_lidar_serial"
 	@echo "... example_lidar_udp"
+	@echo "... wall_measure"
+	@echo "... wall_scan"
 	@echo "... examples/example_ceiling_measurement.o"
 	@echo "... examples/example_ceiling_measurement.i"
 	@echo "... examples/example_ceiling_measurement.s"
@@ -247,6 +323,12 @@ help:
 	@echo "... examples/example_lidar_udp.o"
 	@echo "... examples/example_lidar_udp.i"
 	@echo "... examples/example_lidar_udp.s"
+	@echo "... examples/example_wall_measure.o"
+	@echo "... examples/example_wall_measure.i"
+	@echo "... examples/example_wall_measure.s"
+	@echo "... examples/example_wall_scan.o"
+	@echo "... examples/example_wall_scan.i"
+	@echo "... examples/example_wall_scan.s"
 .PHONY : help
 
 
